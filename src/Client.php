@@ -95,7 +95,7 @@ class Client extends Component
 
 
         $response = curl_exec($curl_handle);
-        $info = (object)curl_getinfo($curl_handle);
+        $info = curl_getinfo($curl_handle);
         $error = curl_error($curl_handle);
 
         curl_close($curl_handle);
