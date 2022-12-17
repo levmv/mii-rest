@@ -1,11 +1,12 @@
 {
-  "name": "levmorozov/mii-rest",
+  "name": "levmv/mii-rest",
   "description": "Mii rest extension",
   "type": "library",
   "minimum-stability": "dev",
   "require": {
-    "levmorozov/mii": "^1.9",
-    "php": ">=7.4"
+    "levmv/mii": "^1.11",
+    "php": ">=8.0",
+    "ext-curl": "*"
   },
   "license": "MIT",
   "authors": [

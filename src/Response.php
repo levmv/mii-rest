@@ -4,41 +4,97 @@ namespace mii\rest;
 
 class Response
 {
-    public $headers = [];
+    public array $headers = [];
 
-    public $content;
+    public mixed $content = null;
 
     protected $_uri;
 
-    protected $_info;
+    protected int $responseCode;
 
     protected $_error;
 
     protected $_result;
 
+    protected string $rawHeaders = '';
+
+    public string $body = '';
+
+    private bool $parsed = false;
+
     /**
      * Sets the total number of rows and stores the result locally.
      *
-     * @param mixed  $result query result
-     * @param string $sql    SQL query
-     * @param mixed  $as_object
-     * @param array  $params
-     * @return  void
+     * @param $response
+     * @param $url
+     * @param $info
+     * @param $error
      */
-    public function __construct($response, $url, $info, $error)
+    public function __construct($response, $url, int $responseCode)
     {
         // Store the result locally
         $this->_result = $response;
 
         $this->_uri = $url;
+//        $this->_info = $info;
+        $this->responseCode = $responseCode;
 
-        $this->_info = $info;
+        list($this->rawHeaders, $this->body) = explode("\r\n\r\n", $response, 2);
+    }
 
-        $this->_error = $error;
 
-        $response_status_lines = [];
-        $line = strtok($response, "\n");
+    public function get(string $name, $default = null)
+    {
+        $this->parseBody();
+        return $this->content[$name] ?? $default;
+    }
 
+    public function iterate($name = null)
+    {
+        if ($name === null) {
+            foreach ($this->content as $value)
+                yield $value;
+        } else {
+            if (!isset($this->content[$name]) || \is_array($this->content))
+                return;
+
+            foreach ($this->content[$name] as $value)
+                yield $value;
+        }
+    }
+
+    public function isOk(): bool
+    {
+        return $this->responseCode >= 200 && $this->responseCode < 300;
+    }
+
+    public function statusCode(): int
+    {
+        return $this->responseCode;
+    }
+
+    public function header(string $name): ?string
+    {
+        if(empty($this->headers)) {
+            $this->parseHeaders();
+        }
+
+        return $this->headers[strtolower($name)] ?? null;
+    }
+
+    protected function parseBody()
+    {
+        if($this->parsed) {
+            return;
+        }
+        $this->content = json_decode($this->body, true);
+        $this->parsed = true;
+    }
+
+
+    protected function parseHeaders()
+    {
+        $line = strtok($this->rawHeaders, "\n");
         do {
             if (\strlen(trim($line)) == 0) {
                 // Since we tokenize on \n, use the remaining \r to detect empty lines.
@@ -60,32 +116,5 @@ class Response
                     $this->headers[$key] = [$this->headers[$key], $value];
             }
         } while ($line = strtok("\n"));
-
-        // TODO:
-        $this->content = json_decode(strtok(""), true);
-    }
-
-    public function get(string $name, $default = null)
-    {
-        return $this->content[$name] ?? $default;
-    }
-
-    public function iterate($name = null)
-    {
-        if ($name === null) {
-            foreach ($this->content as $value)
-                yield $value;
-        } else {
-            if (!isset($this->content[$name]) || \is_array($this->content))
-                return;
-
-            foreach ($this->content[$name] as $value)
-                yield $value;
-        }
-    }
-
-    public function status_code(): int
-    {
-        return (int)$this->_info['http_code'];
     }
 }

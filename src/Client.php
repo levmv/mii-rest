@@ -6,16 +6,18 @@ use mii\core\Component;
 
 class Client extends Component
 {
-    public $base_uri = '';
-    public $user_agent = '';
+    public string $base_uri = '';
+    public string $user_agent = '';
 
-    public $username;
-    public $password;
+    public ?string $username = null;
+    public ?string $password = null;
 
-    public $params = [];
-    public $headers = [];
+    public array $params = [];
+    public array $headers = [];
 
-    public $curl_options;
+    private string $lastError = '';
+
+    public ?array $curl_options = null;
 
     public function get($url, $params = null, $headers = []): Response
     {
@@ -42,13 +44,14 @@ class Client extends Component
         $curl_handle = curl_init();
 
         $curlopt = [
-            CURLOPT_HEADER => TRUE,
+            CURLOPT_HEADER => ['Expect:'],
             CURLOPT_RETURNTRANSFER => TRUE,
-            CURLOPT_USERAGENT => $this->user_agent
+            CURLOPT_USERAGENT => $this->user_agent,
         ];
 
-        if ($this->username && $this->password)
+        if ($this->username && $this->password) {
             $curlopt[CURLOPT_USERPWD] = "{$this->username}:{$this->password}";
+        }
 
         if (\count($this->headers) || \count($headers)) {
             $curlopt[CURLOPT_HTTPHEADER] = [];
@@ -81,7 +84,9 @@ class Client extends Component
             $url .= $parameters_string;
         }
 
-        $url = rtrim($this->base_uri, '/') . '/' . ltrim($url, '/');
+        if($this->base_uri) {
+            $url = rtrim($this->base_uri, '/') . '/' . ltrim($url, '/');
+        }
 
         $curlopt[CURLOPT_URL] = $url;
 
@@ -93,18 +98,22 @@ class Client extends Component
         }
         curl_setopt_array($curl_handle, $curlopt);
 
-
         $response = curl_exec($curl_handle);
-        $info = curl_getinfo($curl_handle);
-        $error = curl_error($curl_handle);
 
+        // TODO: debug mode with logging extended info
+        $responseCode = curl_getinfo($curl_handle, CURLINFO_RESPONSE_CODE);
+
+        $this->lastError = '';
+        if($response === false) {
+            $this->lastError = curl_error($curl_handle);
+        }
         curl_close($curl_handle);
 
-        return new Response($response, $url, $info, $error);
+        return new Response($response, $url, $responseCode);
     }
 
-    private function format_url($url)
+    public function lastError(): string
     {
-        $url = $this->base_uri . '/' . ltrim($url, '/');
+        return $this->lastError;
     }
 }
