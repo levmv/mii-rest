@@ -49,6 +49,12 @@ class Response
         return $this->content[$name] ?? $default;
     }
 
+    public function asArray(): array
+    {
+        $this->parseBody();
+        return $this->content;
+    }
+
     public function iterate($name = null)
     {
         if ($name === null) {
