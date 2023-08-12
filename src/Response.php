@@ -2,6 +2,8 @@
 
 namespace mii\rest;
 
+use function explode;
+
 class Response
 {
     public array $headers = [];
@@ -39,7 +41,9 @@ class Response
 //        $this->_info = $info;
         $this->responseCode = $responseCode;
 
-        list($this->rawHeaders, $this->body) = explode("\r\n\r\n", $response, 2);
+        if($response !== false) {
+            list($this->rawHeaders, $this->body) = explode("\r\n\r\n", $response, 2);
+        }
     }
 
 
